@@ -2,7 +2,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/gestures.dart' show DragStartBehavior;
-// import 'package:flutter_gen/gen_l10n/gallery_localizations.dart';
 
 class AddTodoWidget extends StatelessWidget{
   @override
@@ -169,8 +168,6 @@ class TodoTextFormFieldState extends State<TodoTextFormField> {
                                     child: DropdownScreen(),
                                 ),
                                 sizedBoxSpace,
-                                SelectDate(),
-                                sizedBoxSpace,
                                 Center(
                                     child: RaisedButton(
                                         color: Colors.lightBlueAccent,
@@ -276,55 +273,3 @@ class DropdownScreenState extends State<DropdownScreen> {
     }
 }
 
-class SelectDate extends StatefulWidget {
-    State createState() => SelectDateState();
-    }
-    
-    class SelectDateState extends State<SelectDate> {
-        DateTime selectedDate = DateTime.now(); 
-    @override
-    Widget build(BuildContext context) {
-        return Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-                Text(
-                    "${selectedDate.toLocal()}".split(' ')[0],
-                    style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        fontStyle: FontStyle.italic,
-                        color: Colors.grey[700]
-                    ),
-                ),
-                SizedBox(
-                    height: 2.0
-                ),
-                RaisedButton(
-                    onPressed: () => _selectDate(context),
-                    child: Text(
-                        'Sheduled date for to do',
-                        style: TextStyle(
-                            color: Colors.black87,
-                            fontWeight: FontWeight.bold
-                        ),
-                    ),
-                    color: Colors.greenAccent
-                ),
-            ],
-        );
-    }
-
-    _selectDate(BuildContext context) async {
-        final DateTime picked = await showDatePicker(
-            context: context,
-            initialDate: selectedDate,
-            firstDate: DateTime(selectedDate.year),
-            lastDate: DateTime(selectedDate.year + 10)
-        );
-        if(picked != null && picked != selectedDate) {
-            setState(() {
-                selectedDate = picked;
-            });
-        }
-    }
-}
