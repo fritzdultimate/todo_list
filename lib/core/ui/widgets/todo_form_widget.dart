@@ -1,16 +1,29 @@
+import 'dart:io';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/gestures.dart' show DragStartBehavior;
 import 'package:todo_list/core/ui/widgets/text_field_widget.dart';
+import 'package:todo_list/features/data/models/todo_list_model.dart';
+import 'package:hive/hive.dart';
+import 'dropdown_widget.dart';
 
-
+String formHeader = 'some test';
 class TodoFormWidget extends StatelessWidget {
+    final String header;
+
+    TodoFormWidget({Key key, @required this.header}) {
+        formHeader = header;
+    }
 
     @override
     Widget build(BuildContext context) {
         return Card(
-
+                child: TodoTextFormField(),
+            elevation: 10.0,
+            margin: EdgeInsets.all(20.0),
+            shadowColor: Colors.grey[300],
         );
     }
     
@@ -19,59 +32,9 @@ class TodoFormWidget extends StatelessWidget {
 class TodoData {
     String title = '';
     String text = '';
-    String scheduledDate = '';
     String priority = '';
 }
 
-class TitleField extends StatefulWidget {
-    final Key fieldKey;
-    final String hintText;
-    final String labelText;
-    final String helperText;
-    final FormFieldSetter<String> onSaved;
-    final FormFieldValidator<String> validator;
-    final ValueChanged<String> onFieldSubmitted;
-
-  const TitleField({Key key, this.fieldKey, this.hintText, this.labelText, this.helperText, this.onSaved, this.validator, this.onFieldSubmitted});
-    @override
-    _TitleFieldState createState() => _TitleFieldState();
-
-}
-
-class _TitleFieldState extends State<TitleField> {
-    bool _obscureText = true;
-
-    @override
-    Widget build(BuildContext context) {
-        return TextFormField(
-            key: widget.fieldKey,
-            obscureText: _obscureText,
-            maxLength: 10,
-            onSaved: widget.onSaved,
-            validator: widget.validator,
-            onFieldSubmitted: widget.onFieldSubmitted,
-            decoration: InputDecoration(
-                filled: true,
-                hintText: widget.hintText,
-                labelText: widget.labelText,
-                helperText: widget.helperText,
-                suffixIcon: GestureDetector(
-                    dragStartBehavior: DragStartBehavior.down,
-                    onTap: () {
-                        setState(() {
-                            _obscureText = !_obscureText;
-                        });
-                    },
-                    child: Icon(
-                        _obscureText ? Icons.visibility : Icons.visibility_off,
-                        // semanticLabel: _obscureText ? GalleryLocalizations,
-                    ),
-                )
-            ),
-        );
-    }
-
-}
 
 class TodoTextFormField extends StatefulWidget {
     const TodoTextFormField({
@@ -85,11 +48,21 @@ class TodoTextFormField extends StatefulWidget {
 class TodoTextFormFieldState extends State<TodoTextFormField> {
     TodoData todo = TodoData();
 
-    void showInSnackBar(String value) {
+    void showInSnackBar(String value, Color bg, Color color) {
         Scaffold.of(context).hideCurrentSnackBar();
 
         Scaffold.of(context).showSnackBar(SnackBar(
-            content: Text(value),
+            content: Text(
+                value,
+                style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.normal,
+                ),
+                textAlign: TextAlign.center,
+            ),
+            backgroundColor: bg,
+            duration: Duration(seconds: 5),
+
         ));
     }
 
@@ -98,26 +71,52 @@ class TodoTextFormFieldState extends State<TodoTextFormField> {
     final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
     final GlobalKey<FormFieldState<String>> _titleFieldKey = GlobalKey<FormFieldState<String>>();
 
-    void _handleSubmitted() {
+    void _handleSubmitted() async {
         final form = _formKey.currentState;
         if(!form.validate()) {
             _autovalidate = true;
             showInSnackBar(
-                'error'
+                'Please review errors on the form to continue!',
+                Colors.red[700],
+                Colors.white
             ); 
         } else {
+            Map data = {
+                "title": TodoData().title,
+                "text": TodoData().text,
+                "priority": TodoData().priority
+            };
             form.save();
-            showInSnackBar('yabo');
+            var result = await TodoListModel().createTodo(data);
+            showInSnackBar(
+                'Todo Created Successfully!' + result,
+                Colors.green[600],
+                Colors.white
+            );
+            
         }
     }
 
     String _validateTitle(String value) {
         if(value.isEmpty) {
-            return 'required';
+            return 'please write your todo title';
         }
         final nameExp = RegExp(r'^[A-Za-z ]+$');
         if(!nameExp.hasMatch(value)) {
-            return 'error alpha';
+            return 'only alphabets and space are accepted';
+        }
+        if(value.length < 5) {
+            return 'minimum of 5 chars. is required';
+        }
+        return null;
+    }
+
+    String _validateBody(String value) {
+        if(value.isEmpty) {
+            return 'please write something about the todo';
+        }
+        if(value.length < 25) {
+            return 'minimum of 25 chars. is required';
         }
         return null;
     }
@@ -138,49 +137,56 @@ class TodoTextFormFieldState extends State<TodoTextFormField> {
                         child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                                sizedBoxSpace,
-                                _field(
-                                    hint: 'The title of your todo',
-                                    icon: Icons.text_fields,
-                                    label: 'Todo Title change',
-                                    maxLi: 1,
-                                    maxLe: 25,
-                                    onS: (value) {
-                                        todo.title = value;
-                                    },
-                                    vald: _validateTitle
+                                Container(
+                                    // color: Colors.red[700],
+                                    child: ListTile(
+                                        title: Center(
+                                            child: Text(
+                                                formHeader,
+                                                style: TextStyle(
+                                                    color: Colors.red[700],
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 20.0,
+                                                ),
+                                            )
+                                        ),
+                                    ),
                                 ),
                                 sizedBoxSpace,
                                 TextFieldWidget(
-                                    hintText: 'Test field',
-                                    labelText: 'Some text here',
-                                    helperText: 'some helpers',
+                                    icon: Icons.text_fields,
+                                    hintText: 'The title of your todo',
+                                    labelText: 'Todo Title',
+                                    maxLen: 25,
+                                    maxLine: 1,
+                                    textCapitalize: TextCapitalization.words,
                                     onSaved: (value) {
-                                        todo.text = value;
+                                        todo.title = value;
                                     },
                                     validator: _validateTitle,
                                 ).build(context),
                                 sizedBoxSpace,
-                                _field(
-                                    hint: 'What to do - make it descriptive enough, so you could recall after a long time',
+                                TextFieldWidget(
                                     icon: Icons.text_format,
-                                    label: 'Todo Body',
-                                    maxLi: 8,
-                                    maxLe: 1000,
-                                    onS: (value) {
+                                    hintText: 'Todo description - make it long and descriptive for easier understanding in a long time.',
+                                    labelText: 'Todo Description',
+                                    maxLen: 1000,
+                                    maxLine: 8,
+                                    textCapitalize: TextCapitalization.sentences,
+                                    onSaved: (value) {
                                         todo.text = value;
                                     },
-                                    vald: _validateTitle
-                                ),
+                                    validator: _validateBody,
+                                ).build(context),
                                 sizedBoxSpace,
                                 Container(
                                     margin: EdgeInsets.fromLTRB(25.0, 0, 25.0, 0),
-                                    child: DropdownScreen(),
+                                    child: DropDownWidget(),
                                 ),
                                 sizedBoxSpace,
                                 Center(
                                     child: RaisedButton(
-                                        color: Colors.lightBlueAccent,
+                                        color: Colors.red[700],
                                         child: Text(
                                             'Submit',
                                             style: TextStyle(
@@ -190,95 +196,11 @@ class TodoTextFormFieldState extends State<TodoTextFormField> {
                                         onPressed: _handleSubmitted,
                                     ),
                                 ),
-                                sizedBoxSpace,
                             ],
                         ),
                     )
                 ),
             )
-        );
-    }
-
-    TextFormField _field({
-        @required IconData icon,
-        @required String hint,
-        @required String label,
-        @required int maxLi,
-        @required int maxLe,
-        @required Function onS,
-        @required Function vald
-    }) {
-        return TextFormField(
-            maxLength: maxLe,
-            maxLengthEnforced: true,
-            maxLines: maxLi,
-            textCapitalization: TextCapitalization.words,
-            decoration: InputDecoration(
-                filled: true,
-                icon:  new Icon(icon),
-                hintText: hint,
-                labelText: label,
-                counterText: '33/77'
-            ),
-            onSaved: (value) => onS(value),
-            validator: vald,
-        );
-    }
-
-}
-
-class Item {
-    final String name;
-    final Icon icon;
-
-    const Item(this.name, this.icon);
-}
-
-class DropdownScreen extends StatefulWidget {
-    State createState() => DropdownScreenState();
-}
-
-class DropdownScreenState extends State<DropdownScreen> {
-    Item selectedItem;
-    String selected = '';
-    List<Item> priorities = <Item> [
-        const Item('low', Icon(Icons.low_priority, color: const Color(0xFF167F67))),
-        const Item('medium', Icon(Icons.low_priority, color: const Color(0xFF167F67))),
-        const Item('high', Icon(Icons.priority_high, color: const Color(0xFF167F67)))
-    ];
-
-    @override
-    Widget build(BuildContext context) {
-        return DropdownButtonFormField(
-            hint: Text('Select priority'),
-            value: selectedItem,
-            onChanged: (Item value) {
-                setState(() {
-                    selectedItem = value;
-                    selected = value.name;
-                });
-            },
-            items: priorities.map((Item priority) {
-                return DropdownMenuItem<Item>(
-                    value: priority,
-                    child: Row(
-                        children: <Widget>[
-                            priority.icon,
-                            SizedBox(width: 10),
-                            Text(
-                                priority.name.substring(0, 1).toUpperCase() + priority.name.substring(1),
-                                style: TextStyle(color: Colors.black)
-                            ),
-                        ],
-                    ),
-                );
-            }).toList(),
-            validator: ( Item selectedItem) {
-                if(selected.isEmpty) {
-                    return 'Please choose your todo priority.';
-                }
-                return null;
-            },
         );
     }
 }

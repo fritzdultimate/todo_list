@@ -4,31 +4,38 @@ import 'package:flutter/gestures.dart' show DragStartBehavior;
 class TextFieldWidget extends StatelessWidget {
     final String hintText;
     final String labelText;
-    final String helperText;
     final FormFieldSetter<String> onSaved;
     final FormFieldValidator<String> validator;
+    final IconData icon;
+    final int maxLine;
+    final int maxLen;
+    final TextCapitalization textCapitalize;
 //     final ValueChanged<String> onFieldSubmitted;
 
-  const TextFieldWidget({this.hintText, this.labelText, this.helperText, this.onSaved, this.validator});
+     const TextFieldWidget({
+          @required this.icon,
+          @required this.hintText, 
+          @required this.labelText,  
+          @required this.onSaved, 
+          @required this.validator,
+          @required this.maxLine,
+          @required this.maxLen,
+          @required this.textCapitalize
+     });
 
      @override
      Widget build(BuildContext context) {
           return TextFormField(
-            maxLength: 10,
+            maxLength: maxLen,
+            maxLines: maxLine,
             onSaved: onSaved,
             validator: validator,
-          //   onFieldSubmitted: onFieldSubmitted,
+            textCapitalization: textCapitalize,
             decoration: InputDecoration(
                 filled: true,
                 hintText: hintText,
                 labelText: labelText,
-                helperText: helperText,
-                suffixIcon: GestureDetector(
-                    dragStartBehavior: DragStartBehavior.down,
-                    child: Icon(
-                        Icons.visibility,
-                    ),
-                )
+                icon:  new Icon(icon),
             ),
         );
      }
